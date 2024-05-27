@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Great Spot - Metaverse possibilities</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', path='reset.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}">
+
+
+    <script src="{{ url_for('static', path='libs/gsap/gsap.min.js') }}" defer></script>
+    <script src="{{ url_for('static', path='libs/gsap/ScrollSmoother.min.js') }}" defer></script>
+    <script src="{{ url_for('static', path='libs/gsap/ScrollTrigger.min.js') }}" defer></script>
+
+    <script src="{{ url_for('static', path='main.js') }}" defer></script>
+
+    {% block head %}{% endblock %}
+</head>
+
+<body>
+<div class="wrapper">
+    <div class="content">
+    <div class="page">
+        <div class="header">
+            <a href="/pages/home" class="logo logo-mini">
+                <div class="vertical">
+                    <p>great</p>
+                </div>
+                <div class="horizontal">
+                    <p>SPOT</p>
+                </div>
+            </a>
+            <a href="/pages/auth" class="join-btn">войти</a>
+        </div>
+        </div>
+    {% block content %}{% endblock %}
+
+    </div>
+</div>
+</body>
+
+</html>

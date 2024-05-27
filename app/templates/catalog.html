@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block head %}
+<script src="{{ url_for('static', path='tasks.js') }}" defer></script>
+{% endblock %}
+{% block content %}
+
+
+
+<div class="page">
+            <div class="catalog-categories">
+                <a href="/pages/catalog/?sphere=дизайн" class="category-link">Дизайн</a>
+                <a href="/pages/catalog/?sphere=технологии и программирование" class="category-link">Технологии &
+                    Прогрммирование</a>
+                <a href="/pages/catalog/?sphere=маркетинг" class="category-link">Маркетинг</a>
+                <a href="/pages/catalog/?sphere=видео и анимации" class="category-link">Видео & Анимации</a>
+                <a href="/pages/catalog/?sphere=текст и перевод" class="category-link">Текст & Перевод</a>
+                <a href="/pages/catalog/?sphere=звук и музыка" class="category-link">Звук & Музыка</a>
+                <a href="/pages/catalog/?sphere=консультирование" class="category-link">Консультирование</a>
+                <a href="/pages/catalog/?sphere=AIуслуги" class="category-link">AI услуги</a>
+            </div>
+            <div class="category-name">
+                <span id="CategoryName">{{ category }}</span>
+            </div>
+            <div class="filter-container">
+                <div class="select-filters">
+                    <div class="custom-select">
+                        <span>бюджет</span>
+                        <svg width="16" height="16" viewBox="0 0 11 7" xmlns="http://www.w3.org/2000/svg" fill="white">
+                            <path
+                                d="M5.464 6.389.839 1.769a.38.38 0 0 1 0-.535l.619-.623a.373.373 0 0 1 .531 0l3.74 3.73L9.47.61a.373.373 0 0 1 .531 0l.619.623a.38.38 0 0 1 0 .535l-4.624 4.62a.373.373 0 0 1-.531 0Z">
+                            </path>
+                        </svg>
+                        <div class="dropdown budget-menu">
+                            <label>
+                                <input type="radio" name="budget" value="cheap"> Минимальный до $30
+                            </label>
+                            <label>
+                                <input type="radio" name="budget" value="medium"> Средний от $30 до $58
+                            </label>
+                            <label>
+                                <input type="radio" name="budget" value="expensive"> Более $58
+                            </label>
+                            <label>
+                                <input type="radio" name="budget" value="custom">
+                                <input type="text" id="customBudgetInput" placeholder="бюджет">
+                            </label>
+                        </div>
+                    </div>
+                    <div class="custom-select">
+                        <span>сроки</span>
+                        <svg width="16" height="16" viewBox="0 0 11 7" xmlns="http://www.w3.org/2000/svg" fill="white">
+                            <path
+                                d="M5.464 6.389.839 1.769a.38.38 0 0 1 0-.535l.619-.623a.373.373 0 0 1 .531 0l3.74 3.73L9.47.61a.373.373 0 0 1 .531 0l.619.623a.38.38 0 0 1 0 .535l-4.624 4.62a.373.373 0 0 1-.531 0Z">
+                            </path>
+                        </svg>
+                        <div class="dropdown terms-menu">
+                            <label>
+                                <input type="radio" name="term" value="express"> Срочно 24ч
+                            </label>
+                            <label>
+                                <input type="radio" name="term" value="average"> До 3 дней
+                            </label>
+                            <label>
+                                <input type="radio" name="term" value="long"> До 7 дней
+                            </label>
+                            <label>
+                                <input type="radio" name="term" value="anytime"> Любой срок
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="search-container">
+                    <input type="text" id="name" class="simple-input search-input" placeholder="найти услугу...">
+                </div>
+            </div>
+            <div class="about-services">
+                <span id="service-amount">Всего найдено {{ task_count }}</span>
+                <div class="select-menu">
+                    <div class="select-btn">
+                        <span class="sBtn-text">Сортировать по</span>
+                        <svg width="16" height="16" viewBox="0 0 11 7" xmlns="http://www.w3.org/2000/svg" fill="white">
+                            <path
+                                d="M5.464 6.389.839 1.769a.38.38 0 0 1 0-.535l.619-.623a.373.373 0 0 1 .531 0l3.74 3.73L9.47.61a.373.373 0 0 1 .531 0l.619.623a.38.38 0 0 1 0 .535l-4.624 4.62a.373.373 0 0 1-.531 0Z">
+                            </path>
+                        </svg>
+                    </div>
+                    <ul class="options">
+                        <li class="option" data-sort="price_desc">
+                            <span class="option-text sortOption">Цена</span>
+                        </li>
+                        <li class="option" data-sort="date_asc">
+                            <span class="option-text sortOption">Дедлайн</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div id="cardsContainer">
+                <div id="tasks" class="services-catalog-container">
+                    {% for task in tasks %}
+                    <div id="task" class="service-card">
+
+                        <img id="serviceWallpaper" src="{{ task.img }}" alt="">
+
+
+                        <div class="task-user-info">
+                            <img src="" alt="" id="avatar">
+                            <p>Ad by <span id="userLogin">Nik</span></p>
+                        </div>
+                        <div class="service-info">
+                            <p id="serviceName">{{ task.name }}</p>
+                            <div>
+                                <div class="sort-info">
+                                    <span id="rating">${{ task.salary }}</span>
+                                    </p>
+                                </div>
+                                <p class="price">Дедлайн <span id="price">{{ task.term }}</span></p>
+                            </div>
+
+                        </div>
+
+
+                    </div>
+                    {% endfor %}
+                    <div class="service-card"></div>
+                    <div class="service-card"></div>
+                    <div class="service-card"></div>
+                </div>
+            </div>
+</div>
+
+
+{% endblock %}

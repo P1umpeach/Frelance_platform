@@ -1,12 +1,17 @@
 import hashlib
 import random
 import string
+import jwt
 from datetime import datetime, timedelta
 from sqlalchemy import and_
+import logging
 
 from models.database import database
 from models.users import tokens_table, users_table
 from schemas import users as user_schema
+
+SECRET_KEY = "263781791de966487133ad5c6ef365dc8c4866f6dbe2adce2b2c0bfc2204dfa6"
+ALGORITHM = "HS256"
 
 
 def get_random_string(length=12):
@@ -49,13 +54,16 @@ async def create_user(user: user_schema.UserCreate):
 
 
 async def create_user_token(user_id: int):
-    query = (
-        tokens_table.insert()
-        .values(expires=datetime.now() + timedelta(weeks=2), user_id=user_id)
-        .returning(tokens_table.c.token, tokens_table.c.expires)
-    )
+    expires_at = datetime.now() + timedelta(weeks=2)
+    token_data = {
+        "user_id": user_id,
+        "exp": expires_at
+    }
+    token_value = jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
 
-    return await database.fetch_one(query)
+    query = tokens_table.insert().values(token=token_value, expires=expires_at, user_id=user_id)
+    await database.execute(query)
+    return {"token": token_value, "expires": expires_at}
 
 
 async def get_user_by_token(token: str):

@@ -1,0 +1,786 @@
+Index: app/models/users.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/models/users.py b/app/models/users.py
+new file mode 100644
+--- /dev/null	(date 1715290245237)
++++ b/app/models/users.py	(date 1715290245237)
+@@ -0,0 +1,36 @@
++import sqlalchemy
++from sqlalchemy.dialects.postgresql import UUID
++
++metadata = sqlalchemy.MetaData()
++
++users_table = sqlalchemy.Table(
++    "users",
++    metadata,
++    sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True),
++    sqlalchemy.Column("email", sqlalchemy.String(40), unique=True, index=True),
++    sqlalchemy.Column("name", sqlalchemy.String(100)),
++    sqlalchemy.Column("hashed_password", sqlalchemy.String()),
++    sqlalchemy.Column(
++        "is_active",
++        sqlalchemy.Boolean(),
++        server_default=sqlalchemy.sql.expression.true(),
++        nullable=False,
++    ),
++)
++
++
++tokens_table = sqlalchemy.Table(
++    "tokens",
++    metadata,
++    sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True),
++    sqlalchemy.Column(
++        "token",
++        UUID(as_uuid=False),
++        server_default=sqlalchemy.text("uuid_generate_v4()"),
++        unique=True,
++        nullable=False,
++        index=True,
++    ),
++    sqlalchemy.Column("expires", sqlalchemy.DateTime()),
++    sqlalchemy.Column("user_id", sqlalchemy.ForeignKey("users.id")),
++)
+\ No newline at end of file
+Index: alembic.ini
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/alembic.ini b/alembic.ini
+new file mode 100644
+--- /dev/null	(date 1715290245234)
++++ b/alembic.ini	(date 1715290245234)
+@@ -0,0 +1,116 @@
++# A generic, single database configuration.
++
++[alembic]
++# path to migration scripts
++script_location = migrations
++
++# template used to generate migration file names; The default value is %%(rev)s_%%(slug)s
++# Uncomment the line below if you want the files to be prepended with date and time
++# see https://alembic.sqlalchemy.org/en/latest/tutorial.html#editing-the-ini-file
++# for all available tokens
++# file_template = %%(year)d_%%(month).2d_%%(day).2d_%%(hour).2d%%(minute).2d-%%(rev)s_%%(slug)s
++
++# sys.path path, will be prepended to sys.path if present.
++# defaults to the current working directory.
++prepend_sys_path = .
++
++# timezone to use when rendering the date within the migration file
++# as well as the filename.
++# If specified, requires the python>=3.9 or backports.zoneinfo library.
++# Any required deps can installed by adding `alembic[tz]` to the pip requirements
++# string value is passed to ZoneInfo()
++# leave blank for localtime
++# timezone =
++
++# max length of characters to apply to the
++# "slug" field
++# truncate_slug_length = 40
++
++# set to 'true' to run the environment during
++# the 'revision' command, regardless of autogenerate
++# revision_environment = false
++
++# set to 'true' to allow .pyc and .pyo files without
++# a source .py file to be detected as revisions in the
++# versions/ directory
++# sourceless = false
++
++# version location specification; This defaults
++# to migrations/versions.  When using multiple version
++# directories, initial revisions must be specified with --version-path.
++# The path separator used here should be the separator specified by "version_path_separator" below.
++# version_locations = %(here)s/bar:%(here)s/bat:migrations/versions
++
++# version path separator; As mentioned above, this is the character used to split
++# version_locations. The default within new alembic.ini files is "os", which uses os.pathsep.
++# If this key is omitted entirely, it falls back to the legacy behavior of splitting on spaces and/or commas.
++# Valid values for version_path_separator are:
++#
++# version_path_separator = :
++# version_path_separator = ;
++# version_path_separator = space
++version_path_separator = os  # Use os.pathsep. Default configuration used for new projects.
++
++# set to 'true' to search source files recursively
++# in each "version_locations" directory
++# new in Alembic version 1.10
++# recursive_version_locations = false
++
++# the output encoding used when revision files
++# are written from script.py.mako
++# output_encoding = utf-8
++
++sqlalchemy.url = postgresql://%(DB_USER)s:%(DB_PASS)s@%(DB_HOST)s:5432/%(DB_NAME)s
++
++
++[post_write_hooks]
++# post_write_hooks defines scripts or Python functions that are run
++# on newly generated revision scripts.  See the documentation for further
++# detail and examples
++
++# format using "black" - use the console_scripts runner, against the "black" entrypoint
++# hooks = black
++# black.type = console_scripts
++# black.entrypoint = black
++# black.options = -l 79 REVISION_SCRIPT_FILENAME
++
++# lint with attempts to fix using "ruff" - use the exec runner, execute a binary
++# hooks = ruff
++# ruff.type = exec
++# ruff.executable = %(here)s/.venv/bin/ruff
++# ruff.options = --fix REVISION_SCRIPT_FILENAME
++
++# Logging configuration
++[loggers]
++keys = root,sqlalchemy,alembic
++
++[handlers]
++keys = console
++
++[formatters]
++keys = generic
++
++[logger_root]
++level = WARN
++handlers = console
++qualname =
++
++[logger_sqlalchemy]
++level = WARN
++handlers =
++qualname = sqlalchemy.engine
++
++[logger_alembic]
++level = INFO
++handlers =
++qualname = alembic
++
++[handler_console]
++class = StreamHandler
++args = (sys.stderr,)
++level = NOTSET
++formatter = generic
++
++[formatter_generic]
++format = %(levelname)-5.5s [%(name)s] %(message)s
++datefmt = %H:%M:%S
+Index: migrations/env.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/migrations/env.py b/migrations/env.py
+new file mode 100644
+--- /dev/null	(date 1715290245244)
++++ b/migrations/env.py	(date 1715290245244)
+@@ -0,0 +1,86 @@
++from logging.config import fileConfig
++
++from sqlalchemy import engine_from_config
++from sqlalchemy import pool
++
++from alembic import context
++
++from app.models import database, users
++
++# this is the Alembic Config object, which provides
++# access to the values within the .ini file in use.
++config = context.config
++
++section = config.config_ini_section
++config.set_section_option(section, "DB_USER", database.DB_USER)
++config.set_section_option(section, "DB_PASS", database.DB_PASSWORD)
++config.set_section_option(section, "DB_NAME", database.DB_NAME)
++config.set_section_option(section, "DB_HOST", database.DB_HOST)
++
++# Interpret the config file for Python logging.
++# This line sets up loggers basically.
++if config.config_file_name is not None:
++    fileConfig(config.config_file_name)
++
++# add your model's MetaData object here
++# for 'autogenerate' support
++# from myapp import mymodel
++# target_metadata = mymodel.Base.metadata
++target_metadata = [users.metadata]
++
++# other values from the config, defined by the needs of env.py,
++# can be acquired:
++# my_important_option = config.get_main_option("my_important_option")
++# ... etc.
++
++
++def run_migrations_offline() -> None:
++    """Run migrations in 'offline' mode.
++
++    This configures the context with just a URL
++    and not an Engine, though an Engine is acceptable
++    here as well.  By skipping the Engine creation
++    we don't even need a DBAPI to be available.
++
++    Calls to context.execute() here emit the given string to the
++    script output.
++
++    """
++    url = config.get_main_option("sqlalchemy.url")
++    context.configure(
++        url=url,
++        target_metadata=target_metadata,
++        literal_binds=True,
++        dialect_opts={"paramstyle": "named"},
++    )
++
++    with context.begin_transaction():
++        context.run_migrations()
++
++
++def run_migrations_online() -> None:
++    """Run migrations in 'online' mode.
++
++    In this scenario we need to create an Engine
++    and associate a connection with the context.
++
++    """
++    connectable = engine_from_config(
++        config.get_section(config.config_ini_section, {}),
++        prefix="sqlalchemy.",
++        poolclass=pool.NullPool,
++    )
++
++    with connectable.connect() as connection:
++        context.configure(
++            connection=connection, target_metadata=target_metadata
++        )
++
++        with context.begin_transaction():
++            context.run_migrations()
++
++
++if context.is_offline_mode():
++    run_migrations_offline()
++else:
++    run_migrations_online()
+Index: migrations/README
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/migrations/README b/migrations/README
+new file mode 100644
+--- /dev/null	(date 1715290245243)
++++ b/migrations/README	(date 1715290245243)
+@@ -0,0 +1,1 @@
++Generic single-database configuration.
+\ No newline at end of file
+Index: migrations/script.py.mako
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/migrations/script.py.mako b/migrations/script.py.mako
+new file mode 100644
+--- /dev/null	(date 1715290245245)
++++ b/migrations/script.py.mako	(date 1715290245245)
+@@ -0,0 +1,26 @@
++"""${message}
++
++Revision ID: ${up_revision}
++Revises: ${down_revision | comma,n}
++Create Date: ${create_date}
++
++"""
++from typing import Sequence, Union
++
++from alembic import op
++import sqlalchemy as sa
++${imports if imports else ""}
++
++# revision identifiers, used by Alembic.
++revision: str = ${repr(up_revision)}
++down_revision: Union[str, None] = ${repr(down_revision)}
++branch_labels: Union[str, Sequence[str], None] = ${repr(branch_labels)}
++depends_on: Union[str, Sequence[str], None] = ${repr(depends_on)}
++
++
++def upgrade() -> None:
++    ${upgrades if upgrades else "pass"}
++
++
++def downgrade() -> None:
++    ${downgrades if downgrades else "pass"}
+Index: app/models/database.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/models/database.py b/app/models/database.py
+new file mode 100644
+--- /dev/null	(date 1715290245236)
++++ b/app/models/database.py	(date 1715290245236)
+@@ -0,0 +1,23 @@
++from os import environ
++
++import databases
++
++DB_USER = environ.get("DB_USER", "postgres")
++DB_PASSWORD = environ.get("DB_PASSWORD", "p12056so21")
++DB_HOST = environ.get("DB_HOST", "localhost")
++
++TESTING = environ.get("TESTING")
++
++if TESTING:
++    # Use separate DB for tests
++    DB_NAME = "postgres"
++    TEST_SQLALCHEMY_DATABASE_URL = (
++        f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:5432/{DB_NAME}"
++    )
++    database = databases.Database(TEST_SQLALCHEMY_DATABASE_URL)
++else:
++    DB_NAME = "postgres"
++    SQLALCHEMY_DATABASE_URL = (
++        f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:5432/{DB_NAME}"
++    )
++    database = databases.Database(SQLALCHEMY_DATABASE_URL)
+\ No newline at end of file
+Index: migrations/versions/455d9ab4b36b_added_required_tables.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/migrations/versions/455d9ab4b36b_added_required_tables.py b/migrations/versions/455d9ab4b36b_added_required_tables.py
+new file mode 100644
+--- /dev/null	(date 1715290245246)
++++ b/migrations/versions/455d9ab4b36b_added_required_tables.py	(date 1715290245246)
+@@ -0,0 +1,50 @@
++"""Added required tables
++
++Revision ID: 455d9ab4b36b
++Revises: 
++Create Date: 2024-05-09 23:37:14.445861
++
++"""
++from typing import Sequence, Union
++
++from alembic import op
++import sqlalchemy as sa
++
++
++# revision identifiers, used by Alembic.
++revision: str = '455d9ab4b36b'
++down_revision: Union[str, None] = None
++branch_labels: Union[str, Sequence[str], None] = None
++depends_on: Union[str, Sequence[str], None] = None
++
++
++def upgrade() -> None:
++    # ### commands auto generated by Alembic - please adjust! ###
++    op.create_table('users',
++    sa.Column('id', sa.Integer(), nullable=False),
++    sa.Column('email', sa.String(length=40), nullable=True),
++    sa.Column('name', sa.String(length=100), nullable=True),
++    sa.Column('hashed_password', sa.String(), nullable=True),
++    sa.Column('is_active', sa.Boolean(), server_default=sa.text('true'), nullable=False),
++    sa.PrimaryKeyConstraint('id')
++    )
++    op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
++    op.create_table('tokens',
++    sa.Column('id', sa.Integer(), nullable=False),
++    sa.Column('token', sa.UUID(as_uuid=False), server_default=sa.text('uuid_generate_v4()'), nullable=False),
++    sa.Column('expires', sa.DateTime(), nullable=True),
++    sa.Column('user_id', sa.Integer(), nullable=True),
++    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
++    sa.PrimaryKeyConstraint('id')
++    )
++    op.create_index(op.f('ix_tokens_token'), 'tokens', ['token'], unique=True)
++    # ### end Alembic commands ###
++
++
++def downgrade() -> None:
++    # ### commands auto generated by Alembic - please adjust! ###
++    op.drop_index(op.f('ix_tokens_token'), table_name='tokens')
++    op.drop_table('tokens')
++    op.drop_index(op.f('ix_users_email'), table_name='users')
++    op.drop_table('users')
++    # ### end Alembic commands ###
+Index: .idea/workspace.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<project version=\"4\">\r\n  <component name=\"AutoImportSettings\">\r\n    <option name=\"autoReloadType\" value=\"SELECTIVE\" />\r\n  </component>\r\n  <component name=\"ChangeListManager\">\r\n    <list default=\"true\" id=\"6b0caaec-8384-460f-8c1b-8421d4875e77\" name=\"Changes\" comment=\"\">\r\n<<<<<<< HEAD\r\n      <change afterPath=\"$PROJECT_DIR$/.env\" afterDir=\"false\" />\r\n      <change afterPath=\"$PROJECT_DIR$/config.py\" afterDir=\"false\" />\r\n      <change afterPath=\"$PROJECT_DIR$/main.py\" afterDir=\"false\" />\r\n      <change afterPath=\"$PROJECT_DIR$/models/models.py\" afterDir=\"false\" />\r\n      <change afterPath=\"$PROJECT_DIR$/static/main.js\" afterDir=\"false\" />\r\n=======\r\n      <change afterPath=\"$PROJECT_DIR$/app/main.py\" afterDir=\"false\" />\r\n      <change afterPath=\"$PROJECT_DIR$/app/models/database.py\" afterDir=\"false\" />\r\n      <change afterPath=\"$PROJECT_DIR$/app/models/users.py\" afterDir=\"false\" />\r\n      <change afterPath=\"$PROJECT_DIR$/app/routers/users.py\" afterDir=\"false\" />\r\n      <change afterPath=\"$PROJECT_DIR$/app/schemas/users.py\" afterDir=\"false\" />\r\n      <change afterPath=\"$PROJECT_DIR$/app/utils/dependencies.py\" afterDir=\"false\" />\r\n      <change afterPath=\"$PROJECT_DIR$/app/utils/users.py\" afterDir=\"false\" />\r\n>>>>>>> 5b0dfc1 (auth backend)\r\n      <change beforePath=\"$PROJECT_DIR$/.idea/workspace.xml\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/.idea/workspace.xml\" afterDir=\"false\" />\r\n    </list>\r\n    <option name=\"SHOW_DIALOG\" value=\"false\" />\r\n    <option name=\"HIGHLIGHT_CONFLICTS\" value=\"true\" />\r\n    <option name=\"HIGHLIGHT_NON_ACTIVE_CHANGELIST\" value=\"false\" />\r\n    <option name=\"LAST_RESOLUTION\" value=\"IGNORE\" />\r\n  </component>\r\n  <component name=\"FileTemplateManagerImpl\">\r\n    <option name=\"RECENT_TEMPLATES\">\r\n      <list>\r\n        <option value=\"HTML File\" />\r\n        <option value=\"Python Script\" />\r\n      </list>\r\n    </option>\r\n  </component>\r\n  <component name=\"Git.Settings\">\r\n    <option name=\"RECENT_GIT_ROOT_PATH\" value=\"$PROJECT_DIR$\" />\r\n  </component>\r\n  <component name=\"ProjectColorInfo\">{\r\n  &quot;associatedIndex&quot;: 8\r\n}</component>\r\n  <component name=\"ProjectId\" id=\"2g32mwKCv318Cb7TPMJQlVMrUWY\" />\r\n  <component name=\"ProjectLevelVcsManager\" settingsEditedManually=\"true\" />\r\n  <component name=\"ProjectViewState\">\r\n    <option name=\"hideEmptyMiddlePackages\" value=\"true\" />\r\n    <option name=\"showLibraryContents\" value=\"true\" />\r\n  </component>\r\n  <component name=\"PropertiesComponent\"><![CDATA[{\r\n  \"keyToString\": {\r\n    \"DefaultHtmlFileTemplate\": \"HTML File\",\r\n    \"RunOnceActivity.OpenProjectViewOnStart\": \"true\",\r\n    \"RunOnceActivity.ShowReadmeOnStart\": \"true\",\r\n    \"git-widget-placeholder\": \"684901f0\"\r\n  }\r\n}]]></component>\r\n  <component name=\"RecentsManager\">\r\n    <key name=\"MoveFile.RECENT_KEYS\">\r\n      <recent name=\"C:\\Users\\torun\\PycharmProjects\\Frelance_platform\\static\\fonts\" />\r\n    </key>\r\n  </component>\r\n  <component name=\"SharedIndexes\">\r\n    <attachedChunks>\r\n      <set>\r\n        <option value=\"bundled-python-sdk-50da183f06c8-d3b881c8e49f-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-233.13135.95\" />\r\n      </set>\r\n    </attachedChunks>\r\n  </component>\r\n  <component name=\"SpellCheckerSettings\" RuntimeDictionaries=\"0\" Folders=\"0\" CustomDictionaries=\"0\" DefaultDictionary=\"application-level\" UseSingleDictionary=\"true\" transferred=\"true\" />\r\n  <component name=\"TaskManager\">\r\n    <task active=\"true\" id=\"Default\" summary=\"Default task\">\r\n      <changelist id=\"6b0caaec-8384-460f-8c1b-8421d4875e77\" name=\"Changes\" comment=\"\" />\r\n      <created>1714912103145</created>\r\n      <option name=\"number\" value=\"Default\" />\r\n      <option name=\"presentableId\" value=\"Default\" />\r\n      <updated>1714912103145</updated>\r\n    </task>\r\n    <servers />\r\n  </component>\r\n  <component name=\"Vcs.Log.Tabs.Properties\">\r\n    <option name=\"RECENT_FILTERS\">\r\n      <map>\r\n        <entry key=\"Branch\">\r\n          <value>\r\n            <list>\r\n              <RecentGroup>\r\n                <option name=\"FILTER_VALUES\">\r\n                  <option value=\"auth\" />\r\n                </option>\r\n              </RecentGroup>\r\n              <RecentGroup>\r\n                <option name=\"FILTER_VALUES\">\r\n                  <option value=\"master\" />\r\n                </option>\r\n              </RecentGroup>\r\n              <RecentGroup>\r\n                <option name=\"FILTER_VALUES\">\r\n                  <option value=\"origin/master\" />\r\n                </option>\r\n              </RecentGroup>\r\n              <RecentGroup>\r\n                <option name=\"FILTER_VALUES\">\r\n                  <option value=\"origin/auth\" />\r\n                </option>\r\n              </RecentGroup>\r\n            </list>\r\n          </value>\r\n        </entry>\r\n      </map>\r\n    </option>\r\n    <option name=\"TAB_STATES\">\r\n      <map>\r\n        <entry key=\"MAIN\">\r\n          <value>\r\n            <State>\r\n              <option name=\"FILTERS\">\r\n                <map>\r\n                  <entry key=\"date\">\r\n                    <value>\r\n                      <list>\r\n                        <option value=\"1714681456066\" />\r\n                        <option value=\"\" />\r\n                      </list>\r\n                    </value>\r\n                  </entry>\r\n                </map>\r\n              </option>\r\n            </State>\r\n          </value>\r\n        </entry>\r\n      </map>\r\n    </option>\r\n  </component>\r\n</project>
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/workspace.xml b/.idea/workspace.xml
+--- a/.idea/workspace.xml	(revision c5b320f307b3f424492f41c838c6d282ecfe12b6)
++++ b/.idea/workspace.xml	(date 1715290399834)
+@@ -4,6 +4,7 @@
+     <option name="autoReloadType" value="SELECTIVE" />
+   </component>
+   <component name="ChangeListManager">
++<<<<<<< HEAD
+     <list default="true" id="6b0caaec-8384-460f-8c1b-8421d4875e77" name="Changes" comment="">
+ <<<<<<< HEAD
+       <change afterPath="$PROJECT_DIR$/.env" afterDir="false" />
+@@ -22,6 +23,9 @@
+ >>>>>>> 5b0dfc1 (auth backend)
+       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+     </list>
++=======
++    <list default="true" id="6b0caaec-8384-460f-8c1b-8421d4875e77" name="Changes" comment="auth backend" />
++>>>>>>> 6146ff3 (loaded needed files)
+     <option name="SHOW_DIALOG" value="false" />
+     <option name="HIGHLIGHT_CONFLICTS" value="true" />
+     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+@@ -52,7 +56,7 @@
+     "DefaultHtmlFileTemplate": "HTML File",
+     "RunOnceActivity.OpenProjectViewOnStart": "true",
+     "RunOnceActivity.ShowReadmeOnStart": "true",
+-    "git-widget-placeholder": "684901f0"
++    "git-widget-placeholder": "auth"
+   }
+ }]]></component>
+   <component name="RecentsManager">
+@@ -76,6 +80,15 @@
+       <option name="presentableId" value="Default" />
+       <updated>1714912103145</updated>
+     </task>
++    <task id="LOCAL-00001" summary="auth backend">
++      <option name="closed" value="true" />
++      <created>1715288681974</created>
++      <option name="number" value="00001" />
++      <option name="presentableId" value="LOCAL-00001" />
++      <option name="project" value="LOCAL" />
++      <updated>1715288681974</updated>
++    </task>
++    <option name="localTasksCounter" value="2" />
+     <servers />
+   </component>
+   <component name="Vcs.Log.Tabs.Properties">
+@@ -116,6 +129,13 @@
+             <State>
+               <option name="FILTERS">
+                 <map>
++                  <entry key="branch">
++                    <value>
++                      <list>
++                        <option value="auth" />
++                      </list>
++                    </value>
++                  </entry>
+                   <entry key="date">
+                     <value>
+                       <list>
+@@ -132,4 +152,8 @@
+       </map>
+     </option>
+   </component>
++  <component name="VcsManagerConfiguration">
++    <MESSAGE value="auth backend" />
++    <option name="LAST_COMMIT_MESSAGE" value="auth backend" />
++  </component>
+ </project>
+\ No newline at end of file
+Index: app/main.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/main.py b/app/main.py
+new file mode 100644
+--- /dev/null	(date 1715290245235)
++++ b/app/main.py	(date 1715290245235)
+@@ -0,0 +1,22 @@
++import uvicorn
++from models.database import database
++from routers import users
++from fastapi import FastAPI
++
++app = FastAPI()
++
++
++@app.on_event("startup")
++async def startup():
++    await database.connect()
++
++
++@app.on_event("shutdown")
++async def shutdown():
++    await database.disconnect()
++
++
++app.include_router(users.router)
++
++if __name__ == "__main__":
++    uvicorn.run(app, host="0.0.0.0", port=8000)
+\ No newline at end of file
+Index: app/schemas/users.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/schemas/users.py b/app/schemas/users.py
+new file mode 100644
+--- /dev/null	(date 1715290245239)
++++ b/app/schemas/users.py	(date 1715290245239)
+@@ -0,0 +1,38 @@
++from datetime import datetime
++from typing import Optional
++
++from pydantic import UUID4, BaseModel, EmailStr, validator, Field
++
++
++class TokenBase(BaseModel):
++    """ Return response data """
++    token: UUID4 = Field(..., alias="access_token")
++    expires: datetime
++    token_type: Optional[str] = "bearer"
++
++    class Config:
++        allow_population_by_field_name = True
++
++    @validator("token")
++    def hexlify_token(cls, value):
++        """ Convert UUID to pure hex string """
++        return value.hex
++
++
++class UserBase(BaseModel):
++    """ Return response data """
++    id: int
++    email: EmailStr
++    name: str
++
++
++class UserCreate(BaseModel):
++    """ Validate request data """
++    email: EmailStr
++    name: str
++    password: str
++
++
++class User(UserBase):
++    """ Return detailed response data with token """
++    token: TokenBase = {}
+\ No newline at end of file
+Index: app/utils/users.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/utils/users.py b/app/utils/users.py
+new file mode 100644
+--- /dev/null	(date 1715290245241)
++++ b/app/utils/users.py	(date 1715290245241)
+@@ -0,0 +1,68 @@
++import hashlib
++import random
++import string
++from datetime import datetime, timedelta
++from sqlalchemy import and_
++
++from models.database import database
++from models.users import tokens_table, users_table
++from schemas import users as user_schema
++
++
++def get_random_string(length=12):
++    return "".join(random.choice(string.ascii_letters) for _ in range(length))
++
++
++def hash_password(password: str, salt: str = None):
++    if salt is None:
++        salt = get_random_string()
++    enc = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 100_000)
++    return enc.hex()
++
++
++def validate_password(password: str, hashed_password: str):
++    salt, hashed = hashed_password.split("$")
++    return hash_password(password, salt) == hashed
++
++
++async def get_user(user_id: int):
++    query = users_table.select().where(users_table.c.id == user_id)
++    return await database.fetch_one(query)
++
++
++async def get_user_by_email(email: str):
++    query = users_table.select().where(users_table.c.email == email)
++    return await database.fetch_one(query)
++
++
++async def create_user(user: user_schema.UserCreate):
++    salt = get_random_string()
++    hashed_password = hash_password(user.password, salt)
++    query = users_table.insert().values(
++        email=user.email, name=user.name, hashed_password=f"{salt}${hashed_password}"
++    )
++    user_id = await database.execute(query)
++    token = await create_user_token(user_id)
++    token_dict = {"token": token["token"], "expires": token["expires"]}
++
++    return {**user.dict(), "id": user_id, "is_active": True, "token": token_dict}
++
++
++async def create_user_token(user_id: int):
++    query = (
++        tokens_table.insert()
++        .values(expires=datetime.now() + timedelta(weeks=2), user_id=user_id)
++        .returning(tokens_table.c.token, tokens_table.c.expires)
++    )
++
++    return await database.fetch_one(query)
++
++
++async def get_user_by_token(token: str):
++    query = tokens_table.join(users_table).select().where(
++        and_(
++            tokens_table.c.token == token,
++            tokens_table.c.expires > datetime.now()
++        )
++    )
++    return await database.fetch_one(query)
+\ No newline at end of file
+Index: app/routers/users.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/routers/users.py b/app/routers/users.py
+new file mode 100644
+--- /dev/null	(date 1715290245238)
++++ b/app/routers/users.py	(date 1715290245238)
+@@ -0,0 +1,40 @@
++from schemas import users
++from utils import users as users_utils
++from utils.dependencies import get_current_user
++from fastapi import APIRouter, Depends, HTTPException
++from fastapi.security import OAuth2PasswordRequestForm
++
++router = APIRouter()
++
++
++@router.get("/")
++async def health_check():
++    return {"Hello": "World"}
++
++
++@router.post("/auth", response_model=users.TokenBase)
++async def auth(form_data: OAuth2PasswordRequestForm = Depends()):
++    user = await users_utils.get_user_by_email(email=form_data.username)
++
++    if not user:
++        raise HTTPException(status_code=400, detail="Incorrect email or password")
++
++    if not users_utils.validate_password(
++        password=form_data.password, hashed_password=user["hashed_password"]
++    ):
++        raise HTTPException(status_code=400, detail="Incorrect email or password")
++
++    return await users_utils.create_user_token(user_id=user["id"])
++
++
++@router.post("/sign-up", response_model=users.User)
++async def create_user(user: users.UserCreate):
++    db_user = await users_utils.get_user_by_email(email=user.email)
++    if db_user:
++        raise HTTPException(status_code=400, detail="Email already registered")
++    return await users_utils.create_user(user=user)
++
++
++@router.get("/users/me", response_model=users.UserBase)
++async def read_users_me(current_user: users.User = Depends(get_current_user)):
++    return current_user
+\ No newline at end of file
+Index: app/utils/dependencies.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/utils/dependencies.py b/app/utils/dependencies.py
+new file mode 100644
+--- /dev/null	(date 1715290245240)
++++ b/app/utils/dependencies.py	(date 1715290245240)
+@@ -0,0 +1,20 @@
++from utils import users as users_utils
++from fastapi import Depends, HTTPException, status
++from fastapi.security import OAuth2PasswordBearer
++
++oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth")
++
++
++async def get_current_user(token: str = Depends(oauth2_scheme)):
++    user = await users_utils.get_user_by_token(token)
++    if not user:
++        raise HTTPException(
++            status_code=status.HTTP_401_UNAUTHORIZED,
++            detail="Invalid authentication credentials",
++            headers={"WWW-Authenticate": "Bearer"},
++        )
++    if not user["is_active"]:
++        raise HTTPException(
++            status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user"
++        )
++    return user
+\ No newline at end of file
+Index: .idea/shelf/Uncommitted_changes_before_Checkout_at_09_05_2024_23_21_[Changes]/shelved.patch
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/shelf/Uncommitted_changes_before_Checkout_at_09_05_2024_23_21_[Changes]/shelved.patch b/.idea/shelf/Uncommitted_changes_before_Checkout_at_09_05_2024_23_21_[Changes]/shelved.patch
+new file mode 100644
+--- /dev/null	(date 1715290245231)
++++ b/.idea/shelf/Uncommitted_changes_before_Checkout_at_09_05_2024_23_21_[Changes]/shelved.patch	(date 1715290245231)
+@@ -0,0 +1,30 @@
++Index: .idea/workspace.xml
++IDEA additional info:
++Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
++<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<project version=\"4\">\r\n  <component name=\"AutoImportSettings\">\r\n    <option name=\"autoReloadType\" value=\"SELECTIVE\" />\r\n  </component>\r\n  <component name=\"ChangeListManager\">\r\n    <list default=\"true\" id=\"6b0caaec-8384-460f-8c1b-8421d4875e77\" name=\"Changes\" comment=\"auth backend\">\r\n      <change beforePath=\"$PROJECT_DIR$/.idea/workspace.xml\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/.idea/workspace.xml\" afterDir=\"false\" />\r\n    </list>\r\n    <option name=\"SHOW_DIALOG\" value=\"false\" />\r\n    <option name=\"HIGHLIGHT_CONFLICTS\" value=\"true\" />\r\n    <option name=\"HIGHLIGHT_NON_ACTIVE_CHANGELIST\" value=\"false\" />\r\n    <option name=\"LAST_RESOLUTION\" value=\"IGNORE\" />\r\n  </component>\r\n  <component name=\"FileTemplateManagerImpl\">\r\n    <option name=\"RECENT_TEMPLATES\">\r\n      <list>\r\n        <option value=\"HTML File\" />\r\n        <option value=\"Python Script\" />\r\n      </list>\r\n    </option>\r\n  </component>\r\n  <component name=\"Git.Settings\">\r\n    <option name=\"RECENT_BRANCH_BY_REPOSITORY\">\r\n      <map>\r\n        <entry key=\"$PROJECT_DIR$\" value=\"684901f07defab93c70472a1d9fc97bbb75699e0\" />\r\n      </map>\r\n    </option>\r\n    <option name=\"RECENT_GIT_ROOT_PATH\" value=\"$PROJECT_DIR$\" />\r\n  </component>\r\n  <component name=\"GitHubPullRequestSearchHistory\"><![CDATA[{\r\n  \"lastFilter\": {\r\n    \"state\": \"OPEN\",\r\n    \"assignee\": \"P1umpeach\"\r\n  }\r\n}]]></component>\r\n  <component name=\"GithubPullRequestsUISettings\">\r\n    <option name=\"selectedUrlAndAccountId\">\r\n      <UrlAndAccount>\r\n        <option name=\"accountId\" value=\"695f4aae-c637-4be5-92d8-d1aaf6430afa\" />\r\n        <option name=\"url\" value=\"https://github.com/P1umpeach/Frelance_platform.git\" />\r\n      </UrlAndAccount>\r\n    </option>\r\n  </component>\r\n  <component name=\"ProjectColorInfo\">{\r\n  &quot;associatedIndex&quot;: 8\r\n}</component>\r\n  <component name=\"ProjectId\" id=\"2g32mwKCv318Cb7TPMJQlVMrUWY\" />\r\n  <component name=\"ProjectLevelVcsManager\" settingsEditedManually=\"true\" />\r\n  <component name=\"ProjectViewState\">\r\n    <option name=\"hideEmptyMiddlePackages\" value=\"true\" />\r\n    <option name=\"showLibraryContents\" value=\"true\" />\r\n  </component>\r\n  <component name=\"PropertiesComponent\"><![CDATA[{\r\n  \"keyToString\": {\r\n    \"DefaultHtmlFileTemplate\": \"HTML File\",\r\n    \"RunOnceActivity.OpenProjectViewOnStart\": \"true\",\r\n    \"RunOnceActivity.ShowReadmeOnStart\": \"true\",\r\n    \"git-widget-placeholder\": \"ff868d67\"\r\n  }\r\n}]]></component>\r\n  <component name=\"RecentsManager\">\r\n    <key name=\"MoveFile.RECENT_KEYS\">\r\n      <recent name=\"C:\\Users\\torun\\PycharmProjects\\Frelance_platform\\app\" />\r\n      <recent name=\"C:\\Users\\torun\\PycharmProjects\\Frelance_platform\\static\\fonts\" />\r\n    </key>\r\n  </component>\r\n  <component name=\"SharedIndexes\">\r\n    <attachedChunks>\r\n      <set>\r\n        <option value=\"bundled-python-sdk-50da183f06c8-d3b881c8e49f-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-233.13135.95\" />\r\n      </set>\r\n    </attachedChunks>\r\n  </component>\r\n  <component name=\"SpellCheckerSettings\" RuntimeDictionaries=\"0\" Folders=\"0\" CustomDictionaries=\"0\" DefaultDictionary=\"application-level\" UseSingleDictionary=\"true\" transferred=\"true\" />\r\n  <component name=\"TaskManager\">\r\n    <task active=\"true\" id=\"Default\" summary=\"Default task\">\r\n      <changelist id=\"6b0caaec-8384-460f-8c1b-8421d4875e77\" name=\"Changes\" comment=\"\" />\r\n      <created>1714912103145</created>\r\n      <option name=\"number\" value=\"Default\" />\r\n      <option name=\"presentableId\" value=\"Default\" />\r\n      <updated>1714912103145</updated>\r\n    </task>\r\n    <task id=\"LOCAL-00001\" summary=\"auth backend\">\r\n      <option name=\"closed\" value=\"true\" />\r\n      <created>1715273044845</created>\r\n      <option name=\"number\" value=\"00001\" />\r\n      <option name=\"presentableId\" value=\"LOCAL-00001\" />\r\n      <option name=\"project\" value=\"LOCAL\" />\r\n      <updated>1715273044845</updated>\r\n    </task>\r\n    <option name=\"localTasksCounter\" value=\"2\" />\r\n    <servers />\r\n  </component>\r\n  <component name=\"Vcs.Log.Tabs.Properties\">\r\n    <option name=\"TAB_STATES\">\r\n      <map>\r\n        <entry key=\"MAIN\">\r\n          <value>\r\n            <State />\r\n          </value>\r\n        </entry>\r\n      </map>\r\n    </option>\r\n  </component>\r\n  <component name=\"VcsManagerConfiguration\">\r\n    <MESSAGE value=\"auth backend\" />\r\n    <option name=\"LAST_COMMIT_MESSAGE\" value=\"auth backend\" />\r\n  </component>\r\n</project>
++Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
++<+>UTF-8
++===================================================================
++diff --git a/.idea/workspace.xml b/.idea/workspace.xml
++--- a/.idea/workspace.xml	(revision 269dbb66c1181ff1e7725d5f9509e055fc3d7ef4)
+++++ b/.idea/workspace.xml	(date 1715286015378)
++@@ -4,9 +4,7 @@
++     <option name="autoReloadType" value="SELECTIVE" />
++   </component>
++   <component name="ChangeListManager">
++-    <list default="true" id="6b0caaec-8384-460f-8c1b-8421d4875e77" name="Changes" comment="auth backend">
++-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
++-    </list>
+++    <list default="true" id="6b0caaec-8384-460f-8c1b-8421d4875e77" name="Changes" comment="auth backend" />
++     <option name="SHOW_DIALOG" value="false" />
++     <option name="HIGHLIGHT_CONFLICTS" value="true" />
++     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
++@@ -56,7 +54,7 @@
++     "DefaultHtmlFileTemplate": "HTML File",
++     "RunOnceActivity.OpenProjectViewOnStart": "true",
++     "RunOnceActivity.ShowReadmeOnStart": "true",
++-    "git-widget-placeholder": "ff868d67"
+++    "git-widget-placeholder": "269dbb66"
++   }
++ }]]></component>
++   <component name="RecentsManager">
+Index: .idea/shelf/Uncommitted_changes_before_Checkout_at_09_05_2024_23_21__Changes_.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/shelf/Uncommitted_changes_before_Checkout_at_09_05_2024_23_21__Changes_.xml b/.idea/shelf/Uncommitted_changes_before_Checkout_at_09_05_2024_23_21__Changes_.xml
+new file mode 100644
+--- /dev/null	(date 1715290266657)
++++ b/.idea/shelf/Uncommitted_changes_before_Checkout_at_09_05_2024_23_21__Changes_.xml	(date 1715290266657)
+@@ -0,0 +1,4 @@
++<changelist name="Uncommitted_changes_before_Checkout_at_09_05_2024_23_21_[Changes]" date="1715286099270" recycled="true" deleted="true">
++  <option name="PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Checkout_at_09_05_2024_23_21_[Changes]/shelved.patch" />
++  <option name="DESCRIPTION" value="Uncommitted changes before Checkout at 09.05.2024 23:21 [Changes]" />
++</changelist>
+\ No newline at end of file

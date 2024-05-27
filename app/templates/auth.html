@@ -1,17 +1,11 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "base.html" %}
 
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="reset.css">
-  <script src="main.js" defer></script>
-  <title>Document</title>
-</head>
+{% block head %}
+  <script src="{{ url_for('static', path='auth.js') }}" defer></script>
+{% endblock %}
 
-<body>
-  <section>
+{% block content %}
+  <section class="auth-section">
 
     <svg class="blob-right" width="814" height="738" viewBox="0 0 814 908" fill="none"
       xmlns="http://www.w3.org/2000/svg">
@@ -62,7 +56,7 @@
       </defs>
     </svg>
     <div class="glass-container">
-      <form id="regform">
+      <form id="regform" action="/pages/get-user-data" method="POST">
 
         <fieldset>
           <div class="form-text">
@@ -73,7 +67,7 @@
           <div class="form-input">
             <div class="custom-input">
               <p>Адрес электронной почты</p>
-              <input type="text">
+              <input type="text" name="email">
             </div>
           </div>
 
@@ -127,25 +121,28 @@
           <div class="form-input">
             <div class="custom-input">
               <p>Логин</p>
-              <input type="text">
+              <input type="text" name="login">
             </div>
 
             <div class="custom-input">
               <p>Пароль (не менее 8 символов)</p>
-              <input type="password">
+              <input type="password" name="password">
             </div>
           </div>
 
           <div class="form-buttons">
 
-            <input type="button" name="next" class="next-button" value="создать аккаунт"/>
+            <div class="pare-buttons">
+              <input type="button" name="previous" class="previous" value="назад"/>
+              <input type="submit" name="create" class="create-button" value="создать аккаунт"/>
+            </div>
 
           </div>
         </fieldset>
 
       </form>
 
-      <form id="loginform">
+      <form id="loginform" onsubmit="handleLogin(event)">
 
         <fieldset>
           <div class="form-text">
@@ -155,18 +152,18 @@
 
           <div class="form-input">
             <div class="custom-input">
-              <p>логин</p>
-              <input type="text">
+              <p>почта</p>
+              <input type="text" name="email">
             </div>
             <div class="custom-input">
               <p>пароль</p>
-              <input type="password">
+              <input type="password" name="password">
             </div>
           </div>
 
           <div class="form-buttons">
 
-            <input type="button" name="next" class="next-button" value="войти"/>
+            <input type="submit" name="next" class="next-button" value="войти"/>
 
           </div>
         </fieldset>
@@ -176,6 +173,4 @@
     </div>
   </section>
 
-</body>
-
-</html>
+{% endblock %}
